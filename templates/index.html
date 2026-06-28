@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Emotion Detection & Music Recommendation</title>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a; /* Slate 900 */
+            --glass-bg: rgba(30, 41, 59, 0.7); /* Slate 800 */
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc; /* Slate 50 */
+            --text-muted: #94a3b8; /* Slate 400 */
+            --accent: #3b82f6; /* Blue 500 */
+            --accent-glow: rgba(59, 130, 246, 0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, var(--bg-color), #000000);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            gap: 2rem;
+            width: 90%;
+            max-width: 1200px;
+            height: 80vh;
+        }
+
+        /* Glassmorphism Panels */
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Left Panel - Camera */
+        .camera-panel {
+            flex: 2;
+            align-items: center;
+            position: relative;
+        }
+
+        .camera-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .camera-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        .video-container {
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .video-feed {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+        }
+
+        /* Right Panel - Info & Audio */
+        .info-panel {
+            flex: 1;
+            justify-content: space-between;
+        }
+
+        .emotion-section {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .emotion-title {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+
+        .emotion-value {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(to right, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(192, 132, 252, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            margin-top: 1.5rem;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 0%;
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        .confidence-text {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .music-section {
+            text-align: center;
+            background: rgba(0,0,0,0.2);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .now-playing {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .song-name {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        audio {
+            width: 100%;
+            height: 40px;
+            outline: none;
+        }
+        
+        /* Modern Audio Controls Styling (Webkit specific) */
+        audio::-webkit-media-controls-panel {
+            background-color: #f1f5f9;
+        }
+
+        /* Initial Setup Button */
+        .interaction-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-color);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .start-btn {
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5);
+            transition: transform 0.2s;
+            font-family: inherit;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+                height: 95vh;
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Required due to browser autoplay limits -->
+    <div class="interaction-overlay" id="startOverlay">
+        <button class="start-btn" onclick="startApp()">Enable Camera & Audio</button>
+    </div>
+
+    <div class="container">
+        
+        <!-- Left Panel -->
+        <div class="panel camera-panel">
+            <div class="camera-header">
+                <h1>AI Emotion Sense</h1>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="status-dot"></div>
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">Live Feed</span>
+                </div>
+            </div>
+            <div class="video-container">
+                <img id="videoStream" class="video-feed" src="" alt="Waiting for camera..." />
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="panel info-panel">
+            
+            <div class="emotion-section">
+                <div class="emotion-title">Detected Emotion</div>
+                <h2 class="emotion-value" id="emotionValue">Detecting...</h2>
+                
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceFill"></div>
+                </div>
+                <span class="confidence-text" id="confidenceText">Confidence: 0%</span>
+            </div>
+
+            <div class="music-section">
+                <div class="now-playing">🎧 Now Playing for Your Mood</div>
+                <div class="song-name" id="songName">Waiting for emotion...</div>
+                
+                <audio id="audioPlayer" controls>
+                    <source id="audioSource" src="" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+        const emotionValue = document.getElementById('emotionValue');
+        const confidenceFill = document.getElementById('confidenceFill');
+        const confidenceText = document.getElementById('confidenceText');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioSource = document.getElementById('audioSource');
+        const songName = document.getElementById('songName');
+        const videoStream = document.getElementById('videoStream');
+        
+        let currentSongUrl = null;
+        let fetchInterval = null;
+
+        function startApp() {
+            document.getElementById('startOverlay').style.display = 'none';
+            // Start video feed securely
+            videoStream.src = "{{ url_for('video_feed') }}";
+            
+            // Prime the audio system
+            audioPlayer.play().catch(e => console.log('Audio primed, waiting for valid src.'));
+            
+            // Poll state state every 2 seconds to not spam backend
+            fetchState();
+            fetchInterval = setInterval(fetchState, 1500);
+        }
+
+        async function fetchState() {
+            try {
+                const response = await fetch('/api/state');
+                const data = await response.json();
+
+                if (data.emotion && data.emotion !== "neutral") {
+                    emotionValue.innerText = data.emotion.charAt(0).toUpperCase() + data.emotion.slice(1);
+                } else if(data.emotion === "neutral") {
+                    emotionValue.innerText = "Neutral";
+                }
+
+                // Update Confidence
+                const confPercent = Math.min(Math.max((data.confidence * 100).toFixed(0), 0), 100);
+                confidenceFill.style.width = confPercent + '%';
+                confidenceText.innerText = 'Confidence: ' + confPercent + '%';
+                
+                if(confPercent > 70) confidenceFill.style.background = '#22c55e'; // Green
+                else if(confPercent > 40) confidenceFill.style.background = '#fbbf24'; // Yellow
+                else confidenceFill.style.background = '#ef4444'; // Red
+
+                // Handle Audio Context
+                if (data.song && data.song !== currentSongUrl) {
+                    console.log("Playing new song:", data.song);
+                    currentSongUrl = data.song;
+                    const fileName = data.song.split('/').pop().replace(/_/g, ' ').replace(/\.[^/.]+$/, "");
+                    songName.innerText = fileName.charAt(0).toUpperCase() + fileName.slice(1);
+                    
+                    audioPlayer.src = data.song; // Directly assign src to player for reliable updates
+                    audioPlayer.load();
+                    
+                    let playPromise = audioPlayer.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => console.warn("Audio autoplay prevented by browser", error));
+                    }
+                }
+
+            } catch (err) {
+                console.error("Backend fetch error:", err);
+            }
+        }
+        
+        // Loop the same song if emotion hasn't changed.
+        audioPlayer.addEventListener('ended', function() {
+            // Once ended, we just replay or let fetchState grab a new song if state changed
+            audioPlayer.currentTime = 0;
+            audioPlayer.play();
+        });
+
+    </script>
+</body>
+</html>
